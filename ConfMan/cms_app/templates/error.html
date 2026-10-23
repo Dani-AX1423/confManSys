@@ -1,0 +1,6 @@
+{% extends 'page.html' %}
+{% block title %}{{ code }}{% endblock %}
+{% block body %}
+<div class="err"><div class="code">{{ code }}</div><h1 style="font-size:1.8rem;margin:.4rem 0">{{ title }}</h1><p style="color:var(--ink-2);margin:.6rem auto 1.4rem;max-width:46ch">{{ text }}</p>
+<a class="btn" href="{{ url_for('dashboard') if current_user else url_for('index') }}">{{ 'Back to dashboard' if current_user else 'Back to home' }}</a></div>
+{% endblock %}

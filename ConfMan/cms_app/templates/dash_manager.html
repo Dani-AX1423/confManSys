@@ -1,0 +1,109 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, kpi, vbars, pipeline, badge, empty, csrf, initials %}
+{% set first = current_user.name|firstname %}
+{% block title %}{{ 'Admin dashboard' if current_user.role == 'admin' else 'Chair dashboard' }}{% endblock %}
+{% block body %}
+<div class="head">
+  <div>
+    <h1>Welcome back, {{ first }}</h1>
+    <p>{% if current_user.role == 'admin' %}You oversee {{ k.conferences }} conference{{ 's' if k.conferences != 1 }}, {{ a.users }} active users and {{ k.total }} papers.{% else %}You chair {{ k.conferences }} conference{{ 's' if k.conferences != 1 }} with {{ k.total }} papers so far.{% endif %}</p>
+  </div>
+  <div class="actions">
+    <form method="post" action="{{ url_for('auto_assign_all') }}" class="inline" id="aa-form">{{ csrf() }}</form>
+    <a class="btn ghost" href="{{ url_for('analytics') }}">{{ icon('chart', 18) }}Analytics</a>
+    <a class="btn" href="{{ url_for('conference_new') }}">{{ icon('plus', 18) }}New conference</a>
+  </div>
+</div>
+
+<section class="kpis" aria-label="Key figures">
+  {{ kpi('Papers submitted', k.total, 'across ' ~ k.conferences ~ ' conference' ~ ('s' if k.conferences != 1 else ''), 'file',
+         delta=('+' if k.sub_delta >= 0 else '') ~ k.sub_delta ~ ' vs last week', tone='feature', spark=k.submissions.vals) }}
+  {{ kpi('Need reviewers', k.needs_reviewers, 'papers with fewer than ' ~ 2 ~ ' reviewers', 'userplus', tone='warn' if k.needs_reviewers else '', href=url_for('papers_list', tab='needs'), meter=(100 * k.needs_reviewers / k.total if k.total else 0)) }}
+  {{ kpi('Review progress', k.review_done ~ '/' ~ k.review_assigned, 'reviews done · average score ' ~ k.avg_score ~ '/10', 'check', ring=k.review_pct) }}
+  {{ kpi('Ready for decision', k.ready_for_decision, 'papers with 2+ reviews waiting on you', 'clock', href=url_for('papers_list', tab='ready'), spark=k.reviews_series.vals) }}
+  {{ kpi('Acceptance rate', k.accept_rate ~ '%', k.accepted ~ ' accepted of ' ~ k.decided ~ ' decided', 'star', meter=k.accept_rate) }}
+  {{ kpi('Registrations', k.regs, k.regs_pending ~ ' awaiting payment', 'users') }}
+  {{ kpi('Registration revenue', k.revenue|inr, 'from confirmed payments', 'cash') }}
+  {{ kpi('In the programme', k.status['Scheduled'], 'of ' ~ k.accepted ~ ' accepted papers are scheduled', 'calendar', meter=(100 * k.status['Scheduled'] / k.accepted if k.accepted else 0)) }}
+</section>
+
+{% if current_user.role == 'admin' %}
+<section class="kpis" style="margin-top:1rem" aria-label="Platform figures">
+  {{ kpi('Active users', a.users, a.roles.author ~ ' authors · ' ~ a.roles.reviewer ~ ' reviewers · ' ~ a.roles.chair ~ ' chairs', 'users', delta='+' ~ a.signups_week ~ ' this week', spark=a.signups.vals, href=url_for('admin_users')) }}
+  {{ kpi('Reviewers', a.roles.reviewer, 'volunteer or get auto-assigned', 'eye', href=url_for('admin_users', role='reviewer')) }}
+  {{ kpi('Successful payments', a.payments, a.failed_payments ~ ' declined by the gateway', 'card') }}
+  {{ kpi('Deactivated accounts', a.inactive, 'cannot log in until re-activated', 'lock', href=url_for('admin_users')) }}
+</section>
+{% endif %}
+
+<div class="cols w21">
+  <section class="card flush">
+    <div class="card-head"><div><h2>Papers waiting for reviewers</h2><div class="sub">Assign a reviewer yourself, let ConfMan pick one, or wait for a reviewer to volunteer.</div></div>
+      <div class="actions">
+        {% if need %}<button class="btn amber sm" form="aa-form">{{ icon('wand', 16) }}Auto-assign all</button>{% endif %}
+        <a class="btn ghost sm" href="{{ url_for('papers_list', tab='needs') }}">View all</a></div></div>
+    {% if need %}
+    <div class="table-scroll"><table>
+      <thead><tr><th>Paper</th><th>Track</th><th>Reviewers</th><th>Submitted</th><th></th></tr></thead>
+      <tbody>{% for p in need %}
+        <tr><td class="title"><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><span class="sub">{{ p.conf_name }}</span></td>
+          <td>{{ p.track_name }}</td>
+          <td><span class="chip {{ 'amber' if p.n_rev == 0 else 'teal' }}">{{ p.n_rev }} of 2</span></td>
+          <td>{{ p.submitted_at|ago }}</td>
+          <td><div class="rowact">
+            <form method="post" action="{{ url_for('paper_auto_assign', paper_id=p.paper_id) }}" class="inline">{{ csrf() }}<input type="hidden" name="back" value="/dashboard"><button class="btn sm">{{ icon('wand', 15) }}Auto-assign</button></form>
+            <a class="btn ghost sm" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}#reviewers">Choose</a></div></td></tr>
+      {% endfor %}</tbody></table></div>
+    {% else %}{{ empty('check', 'Every paper has reviewers', 'Nothing is waiting. New submissions will show up here.') }}{% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Paper pipeline</h2><span class="sub">{{ k.total }} papers</span></div>
+    {{ pipeline(k.status) }}
+  </section>
+</div>
+
+<div class="cols c2">
+  <section class="card">
+    <div class="card-head"><h2>Submissions per week</h2><span class="sub">last 8 weeks</span></div>
+    {{ vbars(k.submissions, ' papers') }}
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Ready for your decision</h2><a class="btn ghost sm" href="{{ url_for('papers_list', tab='ready') }}">View all</a></div>
+    {% if ready %}<ul class="list">{% for p in ready %}
+      <li><div class="grow"><a class="t" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><small>{{ p.conf_name }} · {{ p.n_done }} reviews</small></div>
+        <span class="score">{{ p.avg_score }}<small>/10</small></span>
+        <a class="btn sm" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}#decision">Decide</a></li>{% endfor %}</ul>
+    {% else %}{{ empty('clock', 'No decisions pending', 'Papers appear here once two reviewers have scored them.') }}{% endif %}
+  </section>
+</div>
+
+<div class="cols c2">
+  <section class="card">
+    <div class="card-head"><h2>Reviewer workload</h2><span class="sub">pending reviews out of {{ cap }}</span></div>
+    {% for w in workload %}
+      <div class="hbar {{ 'red' if (w.pending or 0) >= cap else ('amber' if (w.pending or 0) >= cap - 1 else '') }}"><span class="n" title="{{ w.expertise }}">{{ w.name }}</span><span class="t"><span style="width:{{ (w.pending or 0) * 100 / cap }}%"></span></span><span class="v">{{ w.pending or 0 }}</span></div>
+    {% else %}{{ empty('users', 'No reviewers yet', 'Reviewers appear here after they register.') }}{% endfor %}
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Recent activity</h2>{% if current_user.role == 'admin' %}<a class="btn ghost sm" href="{{ url_for('admin_activity') }}">Full log</a>{% endif %}</div>
+    <ul class="list">{% for e in activity %}
+      <li><span class="avatar" style="width:2rem;height:2rem;font-size:.75rem">{{ initials(e.who or 'System') }}</span>
+        <div class="grow"><b>{{ e.action }}</b><small>{{ e.detail }}</small></div><small style="color:var(--ink-3);white-space:nowrap">{{ e.created_at|ago }}</small></li>{% endfor %}</ul>
+  </section>
+</div>
+
+<div class="head" style="margin:1.8rem 0 1rem"><div><h1 style="font-size:1.4rem">Conferences</h1></div></div>
+<div class="confgrid">
+  {% for c in confs %}{% include '_confcard.html' %}{% endfor %}
+</div>
+
+{% if current_user.role == 'admin' %}
+<section class="card flush" style="margin-top:1.1rem">
+  <div class="card-head"><div><h2>Newest people</h2><div class="sub">Change roles or deactivate accounts from Users.</div></div><a class="btn ghost sm" href="{{ url_for('admin_users') }}">Manage users</a></div>
+  <div class="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead><tbody>
+    {% for u in newest %}<tr><td class="title"><b>{{ u.name }}</b><span class="sub">{{ u.affiliation }}</span></td><td>{{ u.email }}</td><td><span class="chip teal">{{ u.role }}</span></td><td>{{ u.created_at|ago }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+{% endblock %}

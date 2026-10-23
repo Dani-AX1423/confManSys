@@ -1,0 +1,17 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf, field, initials %}
+{% block title %}Profile{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Profile</h1><p>Your details are used for reviewer matching and receipts.</p></div></div>
+<div class="cols c2" style="align-items:start">
+  <form method="post" class="card rec">{{ csrf() }}<input type="hidden" name="form" value="profile">
+    <div style="display:flex;gap:1rem;align-items:center"><span class="avatar" style="width:3.4rem;height:3.4rem;font-size:1.2rem">{{ initials(current_user.name) }}</span><div><b style="font-size:1.1rem">{{ current_user.email }}</b><div><span class="chip teal">{{ current_user.role }}</span></div></div></div>
+    {{ field('Full name', 'name', 'text', current_user.name) }}
+    {{ field('Affiliation', 'affiliation', 'text', current_user.affiliation, required=False) }}
+    <label class="field"><span>Areas of expertise</span><input name="expertise" value="{{ current_user.expertise }}" placeholder="e.g. machine learning, networks, software testing"><small>{% if current_user.role == 'reviewer' %}Papers that match are listed first under Open for review, and chairs see the match when assigning.{% else %}Optional.{% endif %}</small></label>
+    <div class="actions"><button class="btn">Save profile</button></div></form>
+  <form method="post" class="card rec">{{ csrf() }}<input type="hidden" name="form" value="password"><h2>Change password</h2>
+    {{ field('Current password', 'current', 'password') }}{{ field('New password', 'new', 'password', hint='At least 8 characters with one digit.') }}
+    <div class="actions"><button class="btn ghost">Change password</button></div></form>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, initials, empty %}
+{% block title %}Activity log{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Activity log</h1><p>The latest {{ rows|length }} actions across the system.</p></div></div>
+<section class="card flush"><div class="table-scroll"><table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead><tbody>
+{% for e in rows %}<tr><td style="white-space:nowrap">{{ e.created_at|dt }}</td><td>{% if e.who %}<b>{{ e.who }}</b> <span class="chip">{{ e.who_role }}</span>{% else %}System{% endif %}</td><td><b>{{ e.action }}</b></td><td>{{ e.detail }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

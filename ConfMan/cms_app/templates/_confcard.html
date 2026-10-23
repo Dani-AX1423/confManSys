@@ -1,0 +1,18 @@
+{% from '_macros.html' import icon %}
+<article class="conf">
+  <div class="conf-top">
+    <div class="datebox"><b>{{ c.start_date[8:10] }}</b><span>{{ c.start_date|dt('%b %Y') }}</span></div>
+    <div><h3>{{ c.name }}</h3><small>{{ icon('pin', 15) }}{{ c.venue }}</small></div>
+  </div>
+  <div class="conf-body">
+    {% if c.description %}<p>{{ c.description[:140] }}{{ '…' if c.description|length > 140 }}</p>{% endif %}
+    <div class="mini">
+      <div><b>{{ c.n_papers }}</b><span>papers</span></div>
+      <div><b>{{ c.n_acc if c.n_acc is defined else c.n_tracks }}</b><span>{{ 'accepted' if c.n_acc is defined else 'tracks' }}</span></div>
+      <div><b>{{ c.n_regs }}</b><span>registered</span></div>
+    </div>
+    {% if c.n_decided is defined and c.n_papers %}<div><div class="meter"><span style="width:{{ 100 * c.n_decided / c.n_papers }}%"></span></div><small style="color:var(--ink-3)">{{ c.n_decided }} of {{ c.n_papers }} papers decided</small></div>{% endif %}
+    <div class="chips"><span class="chip">Submit by {{ c.submission_deadline|d }}</span><span class="chip teal">Early bird to {{ c.early_bird_deadline|d }}</span></div>
+  </div>
+  <div class="conf-foot"><a class="btn sm" href="{{ url_for('conference', conf_id=c.conf_id) }}">Open</a><a class="btn ghost sm" href="{{ url_for('program', conf_id=c.conf_id) }}">Programme</a></div>
+</article>

@@ -1,0 +1,9 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, empty %}
+{% block title %}Notifications{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Notifications</h1><p>Updates about your papers, reviews, registrations and account.</p></div></div>
+<section class="card flush">{% if notifications %}<ul class="list" style="padding:0 1.3rem">{% for n in notifications %}
+  <li><span class="kpi-ico" style="{{ '' if n.notif_id in unread_ids else 'opacity:.55' }}">{{ icon('bell', 18) }}</span><div class="grow"><b style="font-weight:{{ 800 if n.notif_id in unread_ids else 600 }}">{{ n.message }}</b><small>{{ n.created_at|ago }}</small></div>{% if n.notif_id in unread_ids %}<span class="chip amber">New</span>{% endif %}</li>{% endfor %}</ul>
+{% else %}{{ empty('bell', 'You are all caught up', 'Updates about your work appear here.') }}{% endif %}</section>
+{% endblock %}

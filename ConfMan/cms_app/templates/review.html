@@ -1,0 +1,24 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf %}
+{% block title %}Write review{% endblock %}
+{% block body %}
+<a class="eyebrow-link" href="{{ url_for('dashboard') }}">{{ icon('arrow', 15) }}Back to dashboard</a>
+<div class="head"><div><h1>Review: {{ asg.title }}</h1><p>{{ asg.conf_name }} · {{ asg.track_name }} · the author is hidden from you.</p></div>
+  <div class="actions"><a class="btn ghost" href="{{ url_for('paper_file', paper_id=asg.paper_id) }}" target="_blank">{{ icon('eye', 18) }}Read PDF</a></div></div>
+<div class="cols w12" style="align-items:start">
+  <section class="card"><div class="card-head"><h2>Abstract</h2></div><p style="line-height:1.7">{{ asg.abstract }}</p>
+    <div class="chips" style="margin-top:1rem">{% for kw in asg.keywords.split(',') if kw.strip() %}<span class="chip teal">{{ kw.strip() }}</span>{% endfor %}</div></section>
+  <section class="card">
+    {% if asg.status == 'Completed' %}<div class="callout">{{ icon('check', 20) }}<div><b>Review submitted</b>You have already reviewed this paper.</div></div>
+    {% else %}
+    <div class="card-head"><h2>Your review</h2></div>
+    <form method="post" class="rec">{{ csrf() }}
+      <label class="field"><span>Score (1 to 10)</span><input type="number" name="score" min="1" max="10" value="{{ form.get('score','') }}" required style="max-width:10rem"><small>7 or more suggests acceptance, 5 to 6 a revision, below 5 rejection.</small></label>
+      <div class="field"><span style="font-weight:700;font-size:.88rem;color:var(--ink-2)">Recommendation</span></div>
+      <div class="seg-radio" style="margin-top:-.5rem">{% for r in recommendations %}<label><input type="radio" name="recommendation" value="{{ r }}" {{ 'checked' if form.get('recommendation') == r }} required><span>{{ r|capitalize }}</span></label>{% endfor %}</div>
+      <label class="field"><span>Comments for the chair and author</span><textarea name="comments" required placeholder="Summarise the contribution, then list strengths and weaknesses. At least 20 characters.">{{ form.get('comments','') }}</textarea></label>
+      <div class="actions"><button class="btn">Submit review</button><a class="btn ghost" href="{{ url_for('dashboard') }}">Cancel</a></div>
+    </form>{% endif %}
+  </section>
+</div>
+{% endblock %}

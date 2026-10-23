@@ -1,0 +1,44 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, kpi, badge, empty, csrf, vbars %}
+{% block title %}Reviewer dashboard{% endblock %}
+{% block body %}
+<div class="head">
+  <div><h1>Welcome back, {{ current_user.name|firstname }}</h1><p>Review the papers assigned to you, or pick up more that match your expertise.</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('papers_list', tab='open') }}">{{ icon('inbox', 18) }}Find papers to review</a></div>
+</div>
+<section class="kpis">
+  {{ kpi('Reviews to write', k.pending, k.slots_left ~ ' of ' ~ k.capacity ~ ' slots free', 'file', tone='feature', meter=(100 * k.pending / k.capacity)) }}
+  {{ kpi('Open for review', k.open, 'papers still short of reviewers', 'inbox', tone='warn' if k.open else '', href=url_for('papers_list', tab='open')) }}
+  {{ kpi('Reviews completed', k.done, 'of ' ~ k.assigned ~ ' assigned', 'check', ring=(100 * k.done / k.assigned)|int if k.assigned else 0, spark=k.series.vals) }}
+  {{ kpi('Your average score', (k.avg_score ~ '/10') if k.avg_score else 'None yet', 'across your submitted reviews', 'star') }}
+</section>
+
+<div class="cols w21">
+  <section class="card flush">
+    <div class="card-head"><div><h2>Your pending reviews</h2><div class="sub">Authors are hidden so you can review blind.</div></div></div>
+    {% if mine %}
+    <div class="table-scroll"><table><thead><tr><th>Paper</th><th>Track</th><th>Assigned</th><th></th></tr></thead><tbody>
+      {% for a in mine %}<tr><td class="title"><a href="{{ url_for('paper_detail', paper_id=a.paper_id) }}">{{ a.title }}</a><span class="sub">{{ a.conf_name }}</span></td><td>{{ a.track_name }}</td><td>{{ a.assigned_at|ago }}</td>
+        <td><div class="rowact"><a class="btn sm" href="{{ url_for('review_form', assignment_id=a.assignment_id) }}">Write review</a></div></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty('inbox', 'No reviews waiting for you', 'The chair assigns papers, and you can also volunteer for papers that match your expertise.', url_for('papers_list', tab='open'), 'See open papers') }}{% endif %}
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Recent reviews</h2></div>
+    {% if recent %}<ul class="list">{% for r in recent %}<li><div class="grow"><b>{{ r.title }}</b><small>{{ r.recommendation|capitalize }} · {{ r.submitted_at|ago }}</small></div><span class="score">{{ r.score }}<small>/10</small></span></li>{% endfor %}</ul>
+    {% else %}<p style="color:var(--ink-2)">Your submitted reviews will appear here.</p>{% endif %}
+  </section>
+</div>
+
+<section class="card flush" style="margin-top:1.1rem">
+  <div class="card-head"><div><h2>Papers that match your expertise</h2><div class="sub">Volunteer and the paper moves straight to your list.</div></div><a class="btn ghost sm" href="{{ url_for('papers_list', tab='open') }}">See all {{ k.open }}</a></div>
+  {% if open_list %}
+  <div class="table-scroll"><table><thead><tr><th>Paper</th><th>Keywords</th><th>Reviewers</th><th>Match</th><th></th></tr></thead><tbody>
+    {% for p in open_list %}<tr><td class="title"><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><span class="sub">{{ p.conf_name }} · {{ p.track_name }}</span></td><td>{{ p.keywords }}</td>
+      <td><span class="chip {{ 'amber' if p.n_reviewers == 0 else 'teal' }}">{{ p.n_reviewers }} of 3</span></td>
+      <td>{% if p.match %}<span class="chip good">{{ p.match }} topic{{ 's' if p.match != 1 }}</span>{% else %}<span class="chip">General</span>{% endif %}</td>
+      <td><div class="rowact"><form method="post" action="{{ url_for('paper_volunteer', paper_id=p.paper_id) }}" class="inline">{{ csrf() }}<input type="hidden" name="back" value="/dashboard"><button class="btn sm" {{ 'disabled' if k.slots_left == 0 }}>Review this</button></form></div></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ empty('check', 'Nothing is waiting for a reviewer', 'Check back after new papers are submitted.') }}{% endif %}
+</section>
+{% endblock %}

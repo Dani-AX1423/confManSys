@@ -1,0 +1,61 @@
+{% extends 'page.html' %}
+{% from "_macros.html" import icon, kpi, badge, empty, csrf, field, pipeline as pipeline_chart %}
+{% block title %}{{ conf.name }}{% endblock %}
+{% block crumb %}Conference{% endblock %}
+{% block body %}
+<a class="eyebrow-link" href="{{ url_for('conferences') }}">{{ icon('arrow', 15) }}All conferences</a>
+<div class="head">
+  <div><h1>{{ conf.name }}</h1><p>{{ conf.venue }} · {{ conf.start_date|d }} to {{ conf.end_date|d }} · chaired by {{ conf.chair_name }}</p>
+    {% if conf.description %}<p style="margin-top:.6rem">{{ conf.description }}</p>{% endif %}</div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('program', conf_id=conf.conf_id) }}">{{ icon('calendar', 18) }}Programme</a>
+    {% if current_user %}
+      {% if current_user.role == 'author' %}<a class="btn" href="{{ url_for('paper_submit', conf_id=conf.conf_id) }}">{{ icon('upload', 18) }}Submit a paper</a>{% endif %}
+      {% if my_reg and my_reg.status == 'Pending Payment' %}<a class="btn amber" href="{{ url_for('pay', reg_id=my_reg.reg_id) }}">Pay {{ my_reg.fee_amount|inr }}</a>
+      {% elif not my_reg %}<a class="btn {{ 'ghost' if current_user.role == 'author' else '' }}" href="{{ url_for('registration', conf_id=conf.conf_id) }}">Register</a>{% endif %}
+    {% else %}<a class="btn" href="{{ url_for('login', next=request.path) }}">Log in to take part</a>{% endif %}
+    {% if is_chair %}<a class="btn ghost" href="{{ url_for('export_papers', conf_id=conf.conf_id) }}">{{ icon('download', 18) }}Export papers</a>{% endif %}
+  </div>
+</div>
+<section class="kpis">
+  {{ kpi('Submissions', stats.papers, 'papers received', 'file', tone='feature') }}
+  {{ kpi('Accepted', stats.accepted, 'to be presented', 'check', meter=(100 * stats.accepted / stats.papers if stats.papers else 0)) }}
+  {{ kpi('Registered', stats.regs, 'confirmed attendees', 'users') }}
+  {{ kpi('Submission deadline', conf.submission_deadline|d, ('closes in ' ~ days_left ~ ' days') if days_left >= 0 else 'closed ' ~ (-days_left) ~ ' days ago', 'clock', tone='warn' if 0 <= days_left <= 14 else '') }}
+</section>
+<div class="cols c2">
+  <section class="card"><div class="card-head"><h2>Key dates and fees</h2></div>
+    <div class="timeline"><div><b>Submission deadline</b><span>{{ conf.submission_deadline|d }}</span></div><div><b>Early bird until</b><span>{{ conf.early_bird_deadline|d }} ({{ discount }}% off)</span></div><div><b>Conference</b><span>{{ conf.start_date|d }} to {{ conf.end_date|d }}</span></div>
+      {% for cat, fee in fees.items() %}<div><b>{{ cat|capitalize }} fee</b><span>{{ fee|inr }}</span></div>{% endfor %}</div></section>
+  <section class="card"><div class="card-head"><h2>Tracks</h2></div>
+    {% if tracks %}<ul class="list">{% for t in tracks %}<li><div class="grow"><b>{{ t.name }}</b></div><span class="chip teal">{{ t.n }} paper{{ 's' if t.n != 1 }}</span></li>{% endfor %}</ul>{% else %}<p style="color:var(--ink-2)">No tracks yet.</p>{% endif %}
+    {% if is_chair %}<form method="post" action="{{ url_for('track_add', conf_id=conf.conf_id) }}" style="display:flex;gap:.6rem;margin-top:1rem">{{ csrf() }}<input name="name" placeholder="New track name" required><button class="btn sm">Add</button></form>{% endif %}</section>
+</div>
+
+{% if is_chair %}
+<section class="card" style="margin-top:1.1rem"><div class="card-head"><h2>Paper pipeline</h2></div>{{ pipeline_chart(pipeline) }}</section>
+<section class="card flush" style="margin-top:1.1rem">
+  <div class="card-head"><h2>Papers</h2>
+    <form method="post" action="{{ url_for('conference_auto_assign', conf_id=conf.conf_id) }}" class="inline">{{ csrf() }}<input type="hidden" name="back" value="{{ request.path }}"><button class="btn amber sm">{{ icon('wand', 16) }}Auto-assign reviewers</button></form></div>
+  {% if papers %}<div class="table-scroll"><table><thead><tr><th>Paper</th><th>Author</th><th>Track</th><th>Reviewers</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for p in papers %}<tr><td class="title"><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a></td><td>{{ p.author_name }}</td><td>{{ p.track_name }}</td>
+      <td><span class="chip {{ 'amber' if p.n_rev == 0 else 'teal' }}">{{ p.n_rev }} of 3</span></td><td>{{ badge(p.status) }}</td><td><div class="rowact"><a class="btn ghost sm" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">Open</a></div></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{{ empty('file', 'No submissions yet', 'Papers appear here as authors submit them.') }}{% endif %}
+</section>
+{% endif %}
+
+<section class="card flush" style="margin-top:1.1rem">
+  <div class="card-head"><h2>Sessions</h2></div>
+  {% if sessions %}<div class="table-scroll"><table><thead><tr><th>Session</th><th>Room</th><th>Time</th><th>Slots</th></tr></thead><tbody>
+    {% for s in sessions %}<tr><td class="title"><b>{{ s.title }}</b></td><td>{{ s.room }}</td><td>{{ s.start_time|dt }} to {{ s.end_time[11:] }}</td><td><span class="chip teal">{{ s.used }}/{{ s.capacity }}</span></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}{{ empty('calendar', 'No sessions scheduled yet', 'Sessions appear here once the chair creates them.') }}{% endif %}
+  {% if is_chair %}<form method="post" action="{{ url_for('session_add', conf_id=conf.conf_id) }}" style="padding:1.2rem 1.3rem;border-top:1px solid var(--line)">{{ csrf() }}
+    <div class="formgrid"><input name="title" placeholder="Session title" required><input name="room" placeholder="Room" required><label class="field"><span>Start</span><input type="datetime-local" name="start_time" required></label><label class="field"><span>End</span><input type="datetime-local" name="end_time" required></label><label class="field"><span>Capacity</span><input type="number" name="capacity" value="4" min="1"></label></div>
+    <button class="btn sm" style="margin-top:.8rem">Add session</button></form>{% endif %}
+</section>
+
+{% if current_user and current_user.role == 'admin' %}
+<section class="card" style="margin-top:1.1rem"><div class="card-head"><h2>Admin: change chair</h2></div>
+  <form method="post" action="{{ url_for('chair_reassign', conf_id=conf.conf_id) }}" style="display:flex;gap:.6rem;flex-wrap:wrap">{{ csrf() }}<select name="chair_id" style="max-width:22rem">{% for c in chairs %}<option value="{{ c.user_id }}" {{ 'selected' if c.user_id == conf.chair_id }}>{{ c.name }}</option>{% endfor %}</select><button class="btn sm">Reassign chair</button></form></section>
+{% endif %}
+{% endblock %}

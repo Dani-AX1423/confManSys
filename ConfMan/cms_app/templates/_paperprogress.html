@@ -1,0 +1,9 @@
+{# stepper for a paper: expects p (status, n_rev, n_done) #}
+{% set st = p.status %}
+{% set stage = 1 if st == 'Submitted' else (2 if st in ('Under Review','Reviewed') else (3 if st in ('Accepted','Rejected','Revision Required') else 4)) %}
+<div class="stepper">
+  {% for label, sub in [('Submitted', ''), ('Under review', (p.n_done|string ~ ' of ' ~ p.n_rev ~ ' reviews') if p.n_rev else 'waiting for reviewers'), ('Decision', st if stage >= 3 else ''), ('Scheduled', '')] %}
+  {% set i = loop.index %}
+  <div class="step {{ 'done' if i < stage or (i == stage and stage == 4) else ('now' if i == stage else '') }}"><i>{{ '✓' if i < stage or (i == stage and stage == 4) else i }}</i>{{ label }}<small>{{ sub }}</small></div>
+  {% endfor %}
+</div>

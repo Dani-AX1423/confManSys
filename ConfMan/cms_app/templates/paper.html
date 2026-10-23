@@ -1,0 +1,119 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, badge, csrf, empty, initials %}
+{% block title %}{{ paper.title }}{% endblock %}
+{% block crumb %}Paper #{{ paper.paper_id }}{% endblock %}
+{% block body %}
+{% set n_rev = assignments|length %}
+{% set n_done = assignments|selectattr('status', 'equalto', 'Completed')|list|length %}
+{% set p = {'status': paper.status, 'n_rev': n_rev, 'n_done': n_done} %}
+<a class="eyebrow-link" href="{{ url_for('papers_list') }}">{{ icon('arrow', 15) }}Back to papers</a>
+<div class="head">
+  <div><h1>{{ paper.title }}</h1>
+    <p>{{ conf.name }} · {{ paper.track_name }}{% if relation in ('chair','author') %} · by {{ paper.author_name }}{% if paper.author_aff %}, {{ paper.author_aff }}{% endif %}{% elif relation == 'public' %} · by {{ paper.author_name }}{% else %} · author hidden for blind review{% endif %}</p></div>
+  <div class="actions">{{ badge(paper.status) }}
+    {% if relation in ('chair','author','reviewer') %}<a class="btn ghost" href="{{ url_for('paper_file', paper_id=paper.paper_id) }}" target="_blank">{{ icon('eye', 18) }}Read PDF</a><a class="btn ghost" href="{{ url_for('paper_file', paper_id=paper.paper_id, dl=1) }}">{{ icon('download', 18) }}Download</a>{% endif %}
+    {% if my_assignment and my_assignment.status == 'Pending' %}<a class="btn" href="{{ url_for('review_form', assignment_id=my_assignment.assignment_id) }}">Write review</a>{% endif %}</div>
+</div>
+
+<section class="card" aria-label="Progress">
+  {% include '_paperprogress.html' %}
+</section>
+
+<div class="cols w21">
+  <div style="display:grid;gap:1.1rem;align-content:start;grid-template-columns:minmax(0,1fr)">
+    <section class="card"><div class="card-head"><h2>Abstract</h2></div>
+      <p style="max-width:80ch;line-height:1.7">{{ paper.abstract }}</p>
+      <div class="chips" style="margin-top:1rem">{% for kw in paper.keywords.split(',') if kw.strip() %}<span class="chip teal">{{ kw.strip() }}</span>{% endfor %}</div>
+    </section>
+
+    {% if relation == 'author' %}
+    <section class="card">
+      <div class="card-head"><h2>Review status</h2></div>
+      {% if paper.status == 'Submitted' and not n_rev %}
+      <div class="callout amber">{{ icon('clock', 22) }}<div><b>Waiting for reviewers</b>No reviewer has been assigned yet. The chair was notified when you submitted, and reviewers whose expertise matches your keywords can pick the paper up from their Open for review list. You will get a notification as soon as review starts.</div></div>
+      {% else %}
+      <p style="margin-bottom:.8rem">{{ n_done }} of {{ n_rev }} reviewer{{ 's' if n_rev != 1 }} finished. At least {{ min_reviews }} reviews are needed before the chair decides.</p>
+      <div class="meter"><span style="width:{{ 100 * n_done / max_reviews }}%"></span></div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if paper.status in ('Accepted','Rejected','Revision Required','Scheduled') and decision_row and (relation in ('chair','author')) %}
+    <section class="card"><div class="card-head"><h2>Decision</h2>{{ badge(paper.status) }}</div>
+      <p>{{ decision_row.remarks or 'No remarks were added.' }}</p><p style="color:var(--ink-3);font-size:.86rem;margin-top:.6rem">Decided by {{ decision_row.by_name }} · {{ decision_row.decided_at|dt }}</p></section>
+    {% endif %}
+
+    {% if show_reviews %}
+    <section class="card" id="reviews"><div class="card-head"><h2>Reviews</h2><span class="sub">{{ n_done }} of {{ n_rev }} submitted</span></div>
+      <div class="rec">{% for a in assignments %}
+        <article class="reviewcard">
+          <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;gap:.7rem;align-items:center"><span class="avatar" style="width:2.2rem;height:2.2rem;font-size:.8rem">{{ initials(a.reviewer_name) if relation == 'chair' else loop.index }}</span>
+              <div><b>{{ a.reviewer_name if relation == 'chair' else 'Reviewer ' ~ loop.index }}</b><div style="color:var(--ink-3);font-size:.82rem">{{ a.reviewed_at|ago if a.reviewed_at else 'Assigned ' ~ (a.assigned_at|ago) }}</div></div></div>
+            {% if a.score %}<div style="text-align:right"><span class="score">{{ a.score }}<small>/10</small></span><div class="chip teal">{{ a.recommendation }}</div></div>{% else %}{{ badge('Pending') }}{% endif %}
+          </div>
+          {% if a.comments %}<p style="margin-top:.7rem;line-height:1.65">{{ a.comments }}</p>{% endif %}
+        </article>{% else %}<p style="color:var(--ink-2)">No reviewers have been assigned.</p>{% endfor %}</div>
+    </section>
+    {% endif %}
+  </div>
+
+  <div style="display:grid;gap:1.1rem;align-content:start;grid-template-columns:minmax(0,1fr)">
+    {% if relation == 'prospect' %}
+    <section class="card">
+      <div class="card-head"><h2>Review this paper?</h2></div>
+      <p style="color:var(--ink-2);margin-bottom:1rem">{{ n_rev }} of {{ max_reviews }} reviewer slots are taken. Volunteering adds the paper to your list and notifies the chair. The PDF opens once it is assigned to you.</p>
+      {% if can_volunteer %}
+      <form method="post" action="{{ url_for('paper_volunteer', paper_id=paper.paper_id) }}">{{ csrf() }}<input type="hidden" name="next" value="review"><button class="btn block">Review this paper</button></form>
+      {% else %}<div class="callout amber">{{ icon('alert', 20) }}<div><b>Not available</b>The paper is full or you already have the maximum number of pending reviews.</div></div>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if relation == 'chair' %}
+    <section class="card" id="reviewers">
+      <div class="card-head"><div><h2>Reviewers</h2><div class="sub">{{ n_rev }} of {{ max_reviews }} assigned · {{ n_done }} reviews in</div></div>
+        {% if ranked and ranked|rejectattr('full')|list %}<form method="post" action="{{ url_for('paper_auto_assign', paper_id=paper.paper_id) }}" class="inline">{{ csrf() }}<button class="btn amber sm">{{ icon('wand', 15) }}Auto-assign</button></form>{% endif %}</div>
+      {% for a in assignments %}
+        <div class="reviewer-row"><span class="avatar" style="width:2.2rem;height:2.2rem;font-size:.8rem">{{ initials(a.reviewer_name) }}</span><div><b>{{ a.reviewer_name }}</b><div style="color:var(--ink-3);font-size:.82rem">{{ a.expertise or 'No expertise listed' }}</div></div>{{ badge(a.status) }}</div>
+      {% else %}<div class="callout amber">{{ icon('userplus', 20) }}<div><b>No reviewer assigned</b>Choose from the ranked list, or use Auto-assign to pick the best matches.</div></div>{% endfor %}
+      {% if ranked %}
+      <h3 style="font-size:.95rem;margin:1.1rem 0 .3rem">Suggested reviewers</h3>
+      {% for r in ranked[:6] %}
+        <div class="reviewer-row"><span class="avatar" style="width:2.2rem;height:2.2rem;font-size:.8rem">{{ initials(r.user.name) }}</span>
+          <div><b>{{ r.user.name }}</b>
+            <div style="color:var(--ink-3);font-size:.82rem">{{ r.user.expertise or 'No expertise listed' }}</div>
+            <div class="chips" style="margin-top:.3rem"><span class="chip {{ 'good' if r.match else '' }}">{{ r.match }} topic match{{ 'es' if r.match != 1 }}</span><span class="chip {{ 'bad' if r.full else '' }}">{{ r.load }}/5 pending</span></div></div>
+          <form method="post" action="{{ url_for('reviewer_assign', paper_id=paper.paper_id) }}">{{ csrf() }}<input type="hidden" name="reviewer_id" value="{{ r.user.user_id }}"><button class="btn sm" {{ 'disabled' if r.full }}>Assign</button></form></div>
+      {% endfor %}{% endif %}
+    </section>
+
+    {% if paper.status in ('Under Review','Reviewed') %}
+    <section class="card" id="decision">
+      <div class="card-head"><h2>Decision</h2></div>
+      {% if suggestion %}<div class="callout" style="margin-bottom:1rem">{{ icon('sparkle', 20) }}<div><b>Suggested: {{ suggestion.suggestion }}</b>Average score {{ suggestion.average }}/10 from {{ suggestion.count }} reviews.</div></div>
+      <form method="post" action="{{ url_for('decision', paper_id=paper.paper_id) }}" class="rec">{{ csrf() }}
+        <label class="field"><span>Decision</span><select name="decision">{% for d in decisions %}<option {{ 'selected' if d == suggestion.suggestion }}>{{ d }}</option>{% endfor %}</select></label>
+        <label class="field"><span>Remarks for the author</span><textarea name="remarks" style="min-height:6rem"></textarea></label>
+        <button class="btn">Record decision</button></form>
+      {% else %}<p style="color:var(--ink-2)">A decision needs at least {{ min_reviews }} completed reviews. {{ n_done }} done so far.</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if paper.status == 'Accepted' %}
+    <section class="card"><div class="card-head"><h2>Schedule presentation</h2></div>
+      {% if sessions %}<form method="post" action="{{ url_for('schedule', paper_id=paper.paper_id) }}" class="rec">{{ csrf() }}
+        <label class="field"><span>Session</span><select name="session_id">{% for s in sessions %}<option value="{{ s.session_id }}">{{ s.title }} · {{ s.room }} · {{ s.start_time|dt('%d %b %H:%M') }} ({{ s.used }}/{{ s.capacity }})</option>{% endfor %}</select></label>
+        <button class="btn">Schedule</button></form>
+        <p style="color:var(--ink-3);font-size:.85rem;margin-top:.6rem">The author must have a paid registration first.</p>
+      {% else %}<p style="color:var(--ink-2)">Create a session on the conference page first.</p>{% endif %}</section>
+    {% endif %}
+    {% endif %}
+
+    {% if sched %}<section class="card"><div class="card-head"><h2>Presentation slot</h2></div>
+      <dl class="kv"><dt>Session</dt><dd>{{ sched.title }}</dd><dt>Room</dt><dd>{{ sched.room }}</dd><dt>Time</dt><dd>{{ sched.start_time|dt }}</dd><dt>Order</dt><dd>#{{ sched.slot_order }}</dd></dl></section>{% endif %}
+
+    <section class="card"><div class="card-head"><h2>Details</h2></div>
+      <dl class="kv"><dt>Submitted</dt><dd>{{ paper.submitted_at|dt }}</dd><dt>Conference</dt><dd><a href="{{ url_for('conference', conf_id=conf.conf_id) }}">{{ conf.name }}</a></dd><dt>Track</dt><dd>{{ paper.track_name }}</dd>{% if relation != 'public' and relation != 'prospect' %}<dt>File</dt><dd>{{ paper.file_name }}</dd>{% endif %}</dl></section>
+  </div>
+</div>
+{% endblock %}

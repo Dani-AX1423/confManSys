@@ -1,0 +1,14 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}Payment{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Payment</h1><p>{{ reg.conf_name }} · {{ reg.category|capitalize }} registration</p></div></div>
+<div class="cols w21" style="align-items:start">
+  <form method="post" class="card rec">{{ csrf() }}
+    {{ field('Card number', 'card', 'text', '', placeholder='4242 4242 4242 4242', extra='inputmode="numeric" autocomplete="cc-number"') }}
+    <div class="callout">{{ icon('lock', 20) }}<div><b>Demo payment gateway</b>Use 4242 4242 4242 4242 to succeed. A valid card number ending in 0002 is declined. The card number is never stored.</div></div>
+    <div class="actions"><button class="btn amber">Pay {{ reg.fee_amount|inr }}</button></div>
+  </form>
+  <section class="card"><h2 style="margin-bottom:.8rem">Order</h2><dl class="kv"><dt>Conference</dt><dd>{{ reg.conf_name }}</dd><dt>Category</dt><dd>{{ reg.category|capitalize }}</dd><dt>Amount</dt><dd class="score">{{ reg.fee_amount|inr }}</dd></dl></section>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, kpi, vbars, pipeline, empty %}
+{% block title %}Analytics{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Analytics</h1><p>How submissions, reviews and money are moving across {{ k.conferences }} conference{{ 's' if k.conferences != 1 }}.</p></div></div>
+<section class="kpis">
+  {{ kpi('Submissions', k.total, '+' ~ k.sub_this_week ~ ' this week', 'file', tone='feature', spark=k.submissions.vals) }}
+  {{ kpi('Reviews submitted', k.review_done, 'of ' ~ k.review_assigned ~ ' assigned', 'check', spark=k.reviews_series.vals) }}
+  {{ kpi('Average score', k.avg_score ~ '/10', 'across all reviews', 'star', ring=(k.avg_score * 10)|int) }}
+  {{ kpi('Revenue', k.revenue|inr, k.regs ~ ' confirmed registrations', 'cash') }}
+</section>
+<div class="cols c2">
+  <section class="card"><div class="card-head"><h2>Submissions per week</h2></div>{{ vbars(k.submissions, ' papers') }}</section>
+  <section class="card"><div class="card-head"><h2>Reviews completed per week</h2></div>{{ vbars(k.reviews_series, ' reviews') }}</section>
+</div>
+<div class="cols c2">
+  <section class="card"><div class="card-head"><h2>Papers by track</h2><span class="sub">total and accepted</span></div>
+    {% set mx = ([tracks|map(attribute='n')|max, 1]|max) if tracks else 1 %}
+    {% for t in tracks %}<div class="hbar"><span class="n" title="{{ t.name }}">{{ t.name }}</span><span class="t"><span style="width:{{ 100 * t.n / mx }}%"></span></span><span class="v">{{ t.n }}<small style="color:var(--ink-3);font-weight:600"> / {{ t.acc or 0 }} acc.</small></span></div>{% else %}{{ empty('chart', 'No tracks yet', 'Create tracks on a conference page.') }}{% endfor %}</section>
+  <section class="card"><div class="card-head"><h2>Review score distribution</h2><span class="sub">number of reviews per score</span></div>
+    {% set hmx = ([hist|max, 1]|max) %}
+    <svg class="vbars" viewBox="0 0 560 170" role="img" aria-label="Score distribution">{% for y in [0,1,2,3] %}<line x1="0" x2="560" y1="{{ 12 + y * 36 }}" y2="{{ 12 + y * 36 }}" class="grid"/>{% endfor %}
+      {% for n in hist %}{% set h = n * 108 / hmx %}<g class="bar-g"><title>Score {{ loop.index }}: {{ n }} review{{ 's' if n != 1 }}</title><rect x="{{ loop.index0 * 56 + 10 }}" y="{{ 120 - h }}" width="36" height="{{ [h,2]|max }}" rx="4" class="bar {{ 'last' if loop.index >= 7 }}"/>
+      <text x="{{ loop.index0 * 56 + 28 }}" y="{{ 112 - h }}" text-anchor="middle" class="bar-v">{{ n or '' }}</text><text x="{{ loop.index0 * 56 + 28 }}" y="140" text-anchor="middle" class="axis">{{ loop.index }}</text></g>{% endfor %}</svg>
+    <p style="color:var(--ink-3);font-size:.85rem">Dark bars (7 to 10) suggest acceptance.</p></section>
+</div>
+<div class="cols c2">
+  <section class="card"><div class="card-head"><h2>Paper pipeline</h2></div>{{ pipeline(k.status) }}</section>
+  <section class="card flush"><div class="card-head"><h2>Revenue by conference</h2></div>
+    <div class="table-scroll"><table><thead><tr><th>Conference</th><th class="num">Paid</th><th class="num">Pending</th><th class="num">Revenue</th></tr></thead><tbody>
+    {% for r in revenue %}<tr><td class="title"><a href="{{ url_for('conference', conf_id=r.conf_id) }}">{{ r.name }}</a></td><td class="num">{{ r.paid or 0 }}</td><td class="num">{{ r.pending or 0 }}</td><td class="num"><b>{{ r.rev|inr }}</b></td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+<section class="card" style="margin-top:1.1rem"><div class="card-head"><h2>Reviewer workload</h2><span class="sub">pending reviews out of {{ cap }}, completed in brackets</span></div>
+  {% for w in workload %}<div class="hbar {{ 'red' if w.pending >= cap else ('amber' if w.pending >= cap - 1 else '') }}"><span class="n">{{ w.name }}</span><span class="t"><span style="width:{{ (w.pending or 0) * 100 / cap }}%"></span></span><span class="v">{{ w.pending or 0 }}<small style="color:var(--ink-3);font-weight:600"> ({{ w.done or 0 }})</small></span></div>{% endfor %}</section>
+{% endblock %}

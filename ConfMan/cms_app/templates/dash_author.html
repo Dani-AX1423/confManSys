@@ -1,0 +1,51 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, kpi, badge, empty %}
+{% block title %}Author dashboard{% endblock %}
+{% block body %}
+<div class="head">
+  <div><h1>Welcome back, {{ current_user.name|firstname }}</h1><p>Follow every paper from submission to the final programme.</p></div>
+  <div class="actions">{% if confs %}<a class="btn" href="{{ url_for('paper_submit', conf_id=confs[0].conf_id) }}">{{ icon('upload', 18) }}Submit a paper</a>{% endif %}</div>
+</div>
+<section class="kpis">
+  {{ kpi('My papers', k.total, k.waiting ~ ' still moving through review', 'file', tone='feature', meter=(100 * (k.total - k.waiting) / k.total if k.total else 0)) }}
+  {{ kpi('Waiting for a reviewer', k.waiting_no_reviewer, 'chair is notified; reviewers can also volunteer', 'userplus', tone='warn' if k.waiting_no_reviewer else '') }}
+  {{ kpi('Accepted', k.accepted, 'to be presented at the conference', 'check', meter=(100 * k.accepted / k.total if k.total else 0)) }}
+  {{ kpi('Average review score', (k.avg_score ~ '/10') if k.avg_score else 'None yet', 'across decided papers', 'star', ring=(k.avg_score * 10)|int if k.avg_score else None) }}
+</section>
+
+<div class="cols w21">
+  <section class="card flush">
+    <div class="card-head"><div><h2>My papers</h2><div class="sub">Reviewers stay anonymous. Full reviews unlock once a decision is made.</div></div><a class="btn ghost sm" href="{{ url_for('papers_list') }}">View all</a></div>
+    {% if papers %}
+    <div style="padding:0 1.3rem 1.2rem;display:grid;gap:1rem">
+      {% for p in papers[:4] %}
+      <article class="reviewcard">
+        <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start">
+          <div><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}" style="font-weight:800;color:var(--ink);text-decoration:none;font-size:1.05rem">{{ p.title }}</a>
+            <div style="color:var(--ink-3);font-size:.88rem">{{ p.conf_name }} · {{ p.track_name }}</div></div>{{ badge(p.status) }}
+        </div>
+        <div style="margin-top:.6rem">{% include '_paperprogress.html' %}</div>
+        {% if p.status == 'Submitted' and not p.n_rev %}
+        <div class="callout amber" style="margin-top:.9rem">{{ icon('clock', 20) }}<div><b>No reviewer yet</b>The chair has been told. Reviewers who match your keywords can also pick this paper up.</div></div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}{{ empty('upload', 'You have not submitted a paper', 'Choose a conference that is open for submissions and upload your PDF.', url_for('paper_submit', conf_id=confs[0].conf_id) if confs else url_for('conferences'), 'Submit a paper' if confs else 'Browse conferences') }}{% endif %}
+  </section>
+  <div style="display:grid;gap:1.1rem;align-content:start;grid-template-columns:minmax(0,1fr)">
+    <section class="card">
+      <div class="card-head"><h2>Open for submissions</h2></div>
+      {% if confs %}<ul class="list">{% for c in confs %}
+        <li><div class="grow"><a class="t" href="{{ url_for('conference', conf_id=c.conf_id) }}">{{ c.name }}</a><small>Deadline {{ c.submission_deadline|d }}</small></div>
+        <a class="btn sm" href="{{ url_for('paper_submit', conf_id=c.conf_id) }}">Submit</a></li>{% endfor %}</ul>
+      {% else %}<p style="color:var(--ink-2)">No conference is accepting papers right now.</p>{% endif %}
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>My registrations</h2></div>
+      {% if regs %}<ul class="list">{% for r in regs %}<li><div class="grow"><b>{{ r.conf_name }}</b><small>{{ r.category|capitalize }} · {{ r.fee_amount|inr }}</small></div>{{ badge('Confirmed' if r.status == 'Confirmed' else 'Pending') }}{% if r.status != 'Confirmed' %}<a class="btn amber sm" href="{{ url_for('pay', reg_id=r.reg_id) }}">Pay</a>{% endif %}</li>{% endfor %}</ul>
+      {% else %}<p style="color:var(--ink-2)">Authors must register and pay before an accepted paper can be scheduled.</p>{% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

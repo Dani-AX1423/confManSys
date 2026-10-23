@@ -1,0 +1,19 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}New conference{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Create a conference</h1><p>Set the dates and deadlines. You add tracks and sessions on the next page.</p></div></div>
+<form method="post" class="card rec">{{ csrf() }}
+  <div class="formgrid">
+    <div class="span">{{ field('Conference name', 'name', 'text', form.get('name','')) }}</div>
+    {{ field('Venue', 'venue', 'text', form.get('venue','')) }}
+    {% if current_user.role == 'admin' %}<label class="field"><span>Conference chair</span><select name="chair_id">{% for c in chairs %}<option value="{{ c.user_id }}">{{ c.name }}</option>{% endfor %}</select></label>{% endif %}
+    <label class="field span"><span>Description <small>(optional)</small></span><textarea name="description" style="min-height:5rem">{{ form.get('description','') }}</textarea></label>
+    {{ field('Start date', 'start_date', 'date', form.get('start_date','')) }}
+    {{ field('End date', 'end_date', 'date', form.get('end_date','')) }}
+    {{ field('Submission deadline', 'submission_deadline', 'date', form.get('submission_deadline',''), hint='Must be before the conference starts.') }}
+    {{ field('Early-bird deadline', 'early_bird_deadline', 'date', form.get('early_bird_deadline',''), hint='20% off registration until this date.') }}
+  </div>
+  <div class="actions"><button class="btn">Create conference</button><a class="btn ghost" href="{{ url_for('conferences') }}">Cancel</a></div>
+</form>
+{% endblock %}

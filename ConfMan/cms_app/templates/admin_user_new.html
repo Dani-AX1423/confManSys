@@ -1,0 +1,14 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}New user{% endblock %}
+{% block body %}
+<a class="eyebrow-link" href="{{ url_for('admin_users') }}">{{ icon('arrow', 15) }}Users</a>
+<div class="head"><div><h1>Create a user</h1><p>Admins can create any role, including chairs and other admins.</p></div></div>
+<form method="post" class="card rec">{{ csrf() }}<div class="formgrid">
+  {{ field('Full name', 'name', 'text', form.get('name','')) }}{{ field('Email', 'email', 'email', form.get('email','')) }}
+  {{ field('Temporary password', 'password', 'password', '', hint='At least 8 characters with one digit.') }}
+  <label class="field"><span>Role</span><select name="role">{% for r in roles %}<option {{ 'selected' if form.get('role','author') == r }}>{{ r }}</option>{% endfor %}</select></label>
+  {{ field('Affiliation', 'affiliation', 'text', form.get('affiliation',''), required=False) }}
+  {{ field('Expertise', 'expertise', 'text', form.get('expertise',''), required=False, hint='Used to match reviewers to papers.') }}</div>
+  <div class="actions"><button class="btn">Create user</button><a class="btn ghost" href="{{ url_for('admin_users') }}">Cancel</a></div></form>
+{% endblock %}

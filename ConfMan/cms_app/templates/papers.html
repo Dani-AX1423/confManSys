@@ -1,0 +1,59 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, badge, empty, csrf %}
+{% block title %}{{ title }}{% endblock %}
+{% block body %}
+<div class="head"><div><h1>{{ title }}</h1><p>{{ subtitle }}</p></div>
+  <div class="actions">{% if current_user.role == 'author' %}<a class="btn" href="{{ url_for('conferences') }}">{{ icon('upload', 18) }}Submit a paper</a>{% endif %}
+  {% if current_user.role in ('chair','admin') and tab == 'needs' and rows %}<form method="post" action="{{ url_for('auto_assign_all') }}" class="inline">{{ csrf() }}<button class="btn amber">{{ icon('wand', 18) }}Auto-assign all</button></form>{% endif %}</div></div>
+
+{% if tabs %}<nav class="tabs" aria-label="Filter papers">
+  {% for key, label in tabs %}<a href="{{ url_for('papers_list', tab=key, q=q or None) }}" class="{{ 'on' if tab == key }}">{{ label }}</a>{% endfor %}</nav>{% endif %}
+
+<form class="filters" method="get">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input class="grow" name="q" value="{{ q }}" placeholder="Search by title, keyword or conference" aria-label="Search">
+  {% if mode != 'open' and current_user.role != 'reviewer' %}<select name="status" aria-label="Status"><option value="">All statuses</option>{% for s in STATUSES %}<option {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}</select>{% endif %}
+  <select name="conf" aria-label="Conference"><option value="">All conferences</option>{% for c in confs %}<option value="{{ c.conf_id }}" {{ 'selected' if conf_filter == c.conf_id }}>{{ c.name }}</option>{% endfor %}</select>
+  <button class="btn">Filter</button>
+</form>
+
+<section class="card flush">
+{% if rows %}
+<div class="table-scroll"><table>
+  {% if mode == 'open' %}
+  <thead><tr><th>Paper</th><th>Track</th><th>Keywords</th><th>Reviewers</th><th>Match</th><th></th></tr></thead>
+  <tbody>{% for p in rows %}<tr>
+    <td class="title"><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><span class="sub">{{ p.conf_name }} · submitted {{ p.submitted_at|ago }}</span></td>
+    <td>{{ p.track_name }}</td><td>{{ p.keywords }}</td>
+    <td><span class="chip {{ 'amber' if p.n_reviewers == 0 else 'teal' }}">{{ p.n_reviewers }} of 3</span></td>
+    <td>{% if p.match %}<span class="chip good">{{ p.match }} topic{{ 's' if p.match != 1 }}</span>{% else %}<span class="chip">General</span>{% endif %}</td>
+    <td><div class="rowact"><a class="btn ghost sm" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">Read abstract</a>
+      <form method="post" action="{{ url_for('paper_volunteer', paper_id=p.paper_id) }}" class="inline">{{ csrf() }}<input type="hidden" name="back" value="/papers?tab=open"><button class="btn sm">Review this</button></form></div></td></tr>{% endfor %}</tbody>
+  {% elif mode == 'reviewer' %}
+  <thead><tr><th>Paper</th><th>Track</th><th>Keywords</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for p in rows %}<tr>
+    <td class="title"><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><span class="sub">{{ p.conf_name }}</span></td>
+    <td>{{ p.track_name }}</td><td>{{ p.keywords }}</td><td>{{ p.assigned_at|ago }}</td><td>{{ badge(p.ra_status) }}</td>
+    <td><div class="rowact">{% if p.ra_status == 'Pending' %}<a class="btn sm" href="{{ url_for('review_form', assignment_id=p.assignment_id) }}">Write review</a>{% else %}<a class="btn ghost sm" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">View</a>{% endif %}</div></td></tr>{% endfor %}</tbody>
+  {% else %}
+  <thead><tr><th>Paper</th><th>Track</th>{% if current_user.role != 'attendee' %}<th>Reviews</th>{% endif %}<th>Status</th><th>Submitted</th><th></th></tr></thead>
+  <tbody>{% for p in rows %}<tr>
+    <td class="title"><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><span class="sub">{{ p.conf_name }}{% if current_user.role != 'author' %} · {{ p.author_name }}{% endif %}</span></td>
+    <td>{{ p.track_name }}</td>
+    {% if current_user.role != 'attendee' %}<td>{% if p.n_rev %}<span class="chip teal">{{ p.n_done }}/{{ p.n_rev }} done</span>{% if p.avg_score and current_user.role in ('chair','admin') %} <span class="chip">avg {{ p.avg_score }}</span>{% endif %}{% else %}<span class="chip amber">No reviewer</span>{% endif %}</td>{% endif %}
+    <td>{{ badge(p.status) }}</td><td>{{ p.submitted_at|ago }}</td>
+    <td><div class="rowact">
+      {% if current_user.role in ('chair','admin') and p.status in ('Submitted','Under Review') and p.n_rev < 2 %}
+      <form method="post" action="{{ url_for('paper_auto_assign', paper_id=p.paper_id) }}" class="inline">{{ csrf() }}<input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}"><button class="btn sm">{{ icon('wand', 15) }}Auto-assign</button></form>{% endif %}
+      <a class="btn ghost sm" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">Open</a></div></td></tr>{% endfor %}</tbody>
+  {% endif %}
+</table></div>
+{% else %}
+  {% if mode == 'open' %}{{ empty('check', 'No papers need reviewers right now', 'Every paper already has its reviewers. New submissions will show up here.') }}
+  {% elif mode == 'reviewer' and tab != 'done' %}{{ empty('inbox', 'No papers assigned to you yet', 'The chair assigns papers to you, and you can also pick papers from Open for review. Papers that match your expertise are listed first.', url_for('papers_list', tab='open'), 'Open for review') }}
+  {% elif current_user.role == 'author' %}{{ empty('upload', 'No papers here yet', 'Submit a paper to a conference that is open for submissions.', url_for('conferences'), 'Browse conferences') }}
+  {% else %}{{ empty('file', 'No papers match', 'Try clearing the search or the filters.') }}{% endif %}
+{% endif %}
+</section>
+<p style="color:var(--ink-3);margin-top:.8rem;font-size:.88rem">{{ rows|length }} paper{{ 's' if rows|length != 1 }}</p>
+{% endblock %}

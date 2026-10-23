@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}Create account{% endblock %}
+{% block layout %}
+<div class="auth">
+  {% set headline = 'Join as an author, reviewer or attendee.' %}
+  {% set lead = 'Authors submit and follow their papers. Reviewers pick papers that match their expertise. Attendees register and pay online.' %}
+  {% include '_authart.html' %}
+  <section class="auth-form">
+    <div class="auth-top"><span></span><button class="iconbtn" id="theme" aria-label="Switch colour theme">{{ icon('moon') }}</button></div>
+    {% include '_flash.html' %}
+    <div>
+      <h2>Create your account</h2>
+      <p class="intro">Already registered? <a href="{{ url_for('login') }}">Log in</a>.</p>
+    </div>
+    <form method="post">
+      {{ csrf() }}
+      <div class="formgrid">
+        {{ field('Full name', 'name', 'text', form.get('name',''), extra='autocomplete="name"') }}
+        {{ field('Email', 'email', 'email', form.get('email',''), extra='autocomplete="username"') }}
+        {{ field('Password', 'password', 'password', '', hint='At least 8 characters with one digit.', extra='autocomplete="new-password"') }}
+        {{ field('Affiliation', 'affiliation', 'text', form.get('affiliation',''), required=False, placeholder='University or company') }}
+      </div>
+      <div class="field"><span style="font-weight:700;font-size:.88rem;color:var(--ink-2)">I am joining as</span></div>
+      <div class="seg-radio" style="margin-top:-.4rem">
+        {% for v, t, d in [('author','Author','Submit and track papers'),('reviewer','Reviewer','Review papers in your field'),('attendee','Attendee','Register and attend')] %}
+        <label><input type="radio" name="role" value="{{ v }}" {{ 'checked' if form.get('role','author') == v }}><span>{{ t }}<small>{{ d }}</small></span></label>
+        {% endfor %}
+      </div>
+      <label class="field"><span>Areas of expertise <small>(reviewers: used to match you with papers)</small></span>
+        <input name="expertise" value="{{ form.get('expertise','') }}" placeholder="e.g. machine learning, networks, software testing"></label>
+      <button class="btn block" style="padding:.8rem">Create account</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

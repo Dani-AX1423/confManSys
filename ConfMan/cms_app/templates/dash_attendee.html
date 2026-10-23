@@ -1,0 +1,24 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, kpi, badge, empty %}
+{% block title %}Attendee dashboard{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Welcome, {{ current_user.name|firstname }}</h1><p>Register for a conference, pay online and browse the accepted papers.</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('conferences') }}">{{ icon('calendar', 18) }}Browse conferences</a></div></div>
+<section class="kpis">
+  {{ kpi('Confirmed registrations', k.confirmed, 'you are in', 'check', tone='feature') }}
+  {{ kpi('Awaiting payment', k.pending, 'complete payment to confirm', 'clock', tone='warn' if k.pending else '') }}
+  {{ kpi('Total paid', k.spent|inr, 'registration fees', 'cash') }}
+  {{ kpi('Accepted papers', accepted|length, 'available to browse', 'file', href=url_for('papers_list')) }}
+</section>
+<div class="cols w21">
+  <section class="card flush"><div class="card-head"><h2>Upcoming conferences</h2></div>
+    <div class="table-scroll"><table><thead><tr><th>Conference</th><th>Dates</th><th>Venue</th><th></th></tr></thead><tbody>
+    {% for c in confs %}<tr><td class="title"><a href="{{ url_for('conference', conf_id=c.conf_id) }}">{{ c.name }}</a></td><td>{{ c.start_date|d }} to {{ c.end_date|d }}</td><td>{{ c.venue }}</td>
+      <td><div class="rowact"><a class="btn sm" href="{{ url_for('registration', conf_id=c.conf_id) }}">Register</a></div></td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="card"><div class="card-head"><h2>My registrations</h2></div>
+    {% if regs %}<ul class="list">{% for r in regs %}<li><div class="grow"><b>{{ r.conf_name }}</b><small>{{ r.venue }} · {{ r.fee_amount|inr }}</small></div>{{ badge('Confirmed' if r.status == 'Confirmed' else 'Pending') }}{% if r.status != 'Confirmed' %}<a class="btn amber sm" href="{{ url_for('pay', reg_id=r.reg_id) }}">Pay</a>{% endif %}</li>{% endfor %}</ul>
+    {% else %}{{ empty('calendar', 'Not registered yet', 'Pick a conference to register.') }}{% endif %}</section>
+</div>
+<section class="card flush" style="margin-top:1.1rem"><div class="card-head"><h2>Recently accepted papers</h2><a class="btn ghost sm" href="{{ url_for('papers_list') }}">View all</a></div>
+  <ul class="list" style="padding:0 1.3rem 1rem">{% for p in accepted %}<li><div class="grow"><a class="t" href="{{ url_for('paper_detail', paper_id=p.paper_id) }}">{{ p.title }}</a><small>{{ p.conf_name }} · {{ p.keywords }}</small></div></li>{% endfor %}</ul></section>
+{% endblock %}

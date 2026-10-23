@@ -1,0 +1,76 @@
+{% from '_macros.html' import icon, initials %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}ConfMan{% endblock %} · ConfMan</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2314a897'/%3E%3Ctext x='16' y='22' font-size='18' font-weight='800' text-anchor='middle' fill='%23032322' font-family='sans-serif'%3EC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script>try{var t=localStorage.getItem('confman-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+{% block layout %}
+{% if current_user %}
+<div class="shell">
+  <aside class="side" id="side">
+    <a class="brand" href="{{ url_for('dashboard') }}"><span class="mark">C</span>ConfMan</a>
+    <nav aria-label="Main">
+      {% for item in nav %}
+        {% if item.label in ('Notifications',) %}<div class="side-sec">Account</div>{% endif %}
+        <a href="{{ item.href }}" class="{{ 'on' if item.active }}" {% if item.active %}aria-current="page"{% endif %}>
+          {{ icon(item.icon, 19) }}<span>{{ item.label }}</span>{% if item.badge %}<span class="n">{{ item.badge }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+    <div class="side-foot">
+      <div class="me"><span class="avatar">{{ initials(current_user.name) }}</span><div><b>{{ current_user.name }}</b><small>{{ current_user.role }}</small></div></div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+        <button class="linkbtn">{{ icon('logout', 19) }}Log out</button>
+      </form>
+    </div>
+  </aside>
+  <div class="main-col">
+    <header class="top">
+      <button class="iconbtn menu" id="menu" aria-label="Open menu">{{ icon('menu') }}</button>
+      <div class="crumb">{% block crumb %}{{ self.title() }}{% endblock %}</div>
+      <div class="grow"></div>
+      <form class="searchbox" action="{{ url_for('papers_list') }}" role="search">{{ icon('search', 18) }}<input name="q" placeholder="Search papers by title or keyword" aria-label="Search papers"></form>
+      <a class="iconbtn" href="{{ url_for('notifications') }}" aria-label="Notifications">{{ icon('bell') }}{% if unread_count %}<span class="dotn">{{ unread_count }}</span>{% endif %}</a>
+      <button class="iconbtn" id="theme" aria-label="Switch colour theme">{{ icon('moon') }}</button>
+    </header>
+    {% include '_flash.html' %}
+    <main>{% block content %}{% endblock %}</main>
+    <footer class="foot">ConfMan · Conference Management System</footer>
+  </div>
+</div>
+{% else %}
+<header class="pubnav">
+  <a class="brand" href="{{ url_for('index') }}"><span class="mark">C</span>ConfMan</a>
+  <span class="spacer"></span>
+  <a class="l" href="{{ url_for('conferences') }}">Conferences</a>
+  <a class="l" href="{{ url_for('login') }}">Log in</a>
+  <a class="btn sm" href="{{ url_for('register') }}">Create account</a>
+  <button class="iconbtn" id="theme" aria-label="Switch colour theme" style="background:transparent;border-color:rgba(255,255,255,.25);color:#fff">{{ icon('moon') }}</button>
+</header>
+{% include '_flash.html' %}
+<main style="padding:0">{% block pubcontent %}<div style="padding:clamp(1.1rem,2.2vw,2.2rem) clamp(1rem,3vw,3rem) 2.5rem">{% block content_public %}{% endblock %}</div>{% endblock %}</main>
+<footer class="foot">ConfMan · Conference Management System</footer>
+{% endif %}
+{% endblock %}
+<script>
+(function(){
+  var b=document.body,m=document.getElementById('menu');
+  if(m)m.addEventListener('click',function(){b.classList.toggle('nav-open')});
+  document.addEventListener('click',function(e){if(b.classList.contains('nav-open')&&!e.target.closest('#side')&&!e.target.closest('#menu'))b.classList.remove('nav-open')});
+  var t=document.getElementById('theme');
+  if(t)t.addEventListener('click',function(){var d=document.documentElement,n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('confman-theme',n)}catch(e){}});
+  document.querySelectorAll('.flash button').forEach(function(x){x.addEventListener('click',function(){x.parentNode.remove()})});
+  setTimeout(function(){document.querySelectorAll('.flash.success').forEach(function(x){x.remove()})},5000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf %}
+{% block title %}Register{% endblock %}
+{% block body %}
+<a class="eyebrow-link" href="{{ url_for('conference', conf_id=conf.conf_id) }}">{{ icon('arrow', 15) }}{{ conf.name }}</a>
+<div class="head"><div><h1>Register for {{ conf.name }}</h1><p>{% if early %}Early-bird prices are active until {{ conf.early_bird_deadline|d }}: {{ discount }}% off.{% else %}Early-bird pricing has ended. Standard fees apply.{% endif %}</p></div></div>
+<form method="post" class="rec">{{ csrf() }}
+  <div class="seg-radio" style="grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))">
+    {% for cat, fee in fees.items() %}<label><input type="radio" name="category" value="{{ cat }}" {{ 'checked' if loop.first }}><span style="padding:1.1rem 1.2rem"><span style="font-family:var(--display);font-size:1.15rem">{{ cat|capitalize }}</span>
+      <b style="font-family:var(--display);font-size:2rem;font-weight:800;line-height:1.1">{{ (fee * (1 - discount / 100 if early else 1))|inr }}</b>
+      <small>{% if early %}<s>{{ fee|inr }}</s> early bird{% else %}Standard fee{% endif %}</small></span></label>{% endfor %}
+  </div>
+  <div class="actions"><button class="btn">Continue to payment</button></div>
+</form>
+{% endblock %}

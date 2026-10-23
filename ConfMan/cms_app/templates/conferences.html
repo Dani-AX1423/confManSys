@@ -1,0 +1,9 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, empty %}
+{% block title %}Conferences{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Conferences</h1><p>Open the conference page to submit a paper, register or read the programme.</p></div>
+  <div class="actions">{% if current_user and current_user.role in ('chair','admin') %}<a class="btn" href="{{ url_for('conference_new') }}">{{ icon('plus', 18) }}New conference</a>{% endif %}</div></div>
+{% if conferences %}<div class="confgrid">{% for c in conferences %}{% include '_confcard.html' %}{% endfor %}</div>
+{% else %}<div class="card">{{ empty('calendar', 'No conferences yet', 'A chair or admin can create the first conference.') }}</div>{% endif %}
+{% endblock %}

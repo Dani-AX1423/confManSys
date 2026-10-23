@@ -1,0 +1,20 @@
+{% from '_macros.html' import icon %}
+<section class="auth-art">
+  <a class="brand" href="{{ url_for('index') }}"><span class="mark">C</span>ConfMan</a>
+  <div>
+    <h1>{{ headline }}</h1>
+    <p class="lead" style="margin-top:1.1rem">{{ lead }}</p>
+  </div>
+  <div class="auth-grid">
+    <div class="auth-tile"><b>{{ stats.papers }}</b><span>papers in the system</span></div>
+    <div class="auth-tile"><b>{{ stats.reviews }}</b><span>reviews completed</span></div>
+    <div class="auth-tile"><b>{{ stats.conferences }}</b><span>conferences running</span></div>
+    <div class="auth-tile"><b>{{ stats.people }}</b><span>authors, reviewers and chairs</span></div>
+    <div class="auth-tile wide">
+      <span>Where the papers are right now</span>
+      {% set total = pipeline.values()|sum %}
+      <div class="stack" style="margin:.2rem 0 0;background:rgba(255,255,255,.12)">{% for s, n in pipeline.items() if n %}<span class="seg s-{{ s|lower|replace(' ', '-') }}" style="flex:{{ n }}" title="{{ s }}: {{ n }}"></span>{% endfor %}</div>
+      <div class="chips">{% for s, n in pipeline.items() if n %}<span class="chip" style="background:rgba(255,255,255,.12);color:#e6f8f4"><i class="dot s-{{ s|lower|replace(' ', '-') }}"></i>{{ s }} {{ n }}</span>{% endfor %}</div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,22 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf, initials, empty %}
+{% block title %}Users{% endblock %}
+{% block body %}
+<div class="head"><div><h1>Users</h1><p>Create accounts, change roles and deactivate people who should no longer log in.</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('admin_user_new') }}">{{ icon('plus', 18) }}New user</a></div></div>
+<nav class="tabs" aria-label="Role">
+  <a href="{{ url_for('admin_users') }}" class="{{ 'on' if not role }}">All ({{ counts.values()|sum }})</a>
+  {% for r in roles %}<a href="{{ url_for('admin_users', role=r) }}" class="{{ 'on' if role == r }}">{{ r|capitalize }} ({{ counts.get(r, 0) }})</a>{% endfor %}</nav>
+<form class="filters" method="get"><input type="hidden" name="role" value="{{ role }}"><input class="grow" name="q" value="{{ q }}" placeholder="Search name, email or affiliation" aria-label="Search"><button class="btn">Search</button></form>
+<section class="card flush"><div class="table-scroll"><table><thead><tr><th>Person</th><th>Role</th><th>Activity</th><th>Joined</th><th>Status</th><th></th></tr></thead><tbody>
+{% for u in users %}<tr>
+  <td><div style="display:flex;gap:.7rem;align-items:center"><span class="avatar" style="width:2.2rem;height:2.2rem;font-size:.8rem">{{ initials(u.name) }}</span><div class="title"><b>{{ u.name }}</b><span class="sub">{{ u.email }}{% if u.affiliation %} · {{ u.affiliation }}{% endif %}</span></div></div></td>
+  <td><form method="post" action="{{ url_for('admin_set_role', user_id=u.user_id) }}" class="inline" style="display:flex;gap:.4rem">{{ csrf() }}<input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}">
+    <select name="role" style="width:8.5rem;padding:.35rem .5rem" aria-label="Role for {{ u.name }}" onchange="this.form.submit()">{% for r in roles %}<option {{ 'selected' if r == u.role }}>{{ r }}</option>{% endfor %}</select></form></td>
+  <td>{% if u.n_papers %}<span class="chip teal">{{ u.n_papers }} papers</span> {% endif %}{% if u.n_reviews %}<span class="chip">{{ u.n_reviews }} reviews</span>{% endif %}{% if not u.n_papers and not u.n_reviews %}<span style="color:var(--ink-3)">None</span>{% endif %}</td>
+  <td>{{ u.created_at|ago }}</td>
+  <td><span class="chip {{ 'good' if u.is_active else 'bad' }}">{{ 'Active' if u.is_active else 'Deactivated' }}</span></td>
+  <td><div class="rowact"><form method="post" action="{{ url_for('admin_set_active', user_id=u.user_id) }}" class="inline">{{ csrf() }}<input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}"><input type="hidden" name="active" value="{{ 0 if u.is_active else 1 }}"><button class="btn ghost sm" {{ 'disabled' if u.user_id == current_user.user_id }}>{{ 'Deactivate' if u.is_active else 'Activate' }}</button></form></div></td></tr>
+{% else %}<tr><td colspan="6">{{ empty('users', 'No users match', 'Clear the search or choose another role.') }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

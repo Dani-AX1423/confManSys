@@ -1,0 +1,12 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, empty %}
+{% block title %}Programme{% endblock %}
+{% block body %}
+<a class="eyebrow-link" href="{{ url_for('conference', conf_id=conf.conf_id) }}">{{ icon('arrow', 15) }}{{ conf.name }}</a>
+<div class="head"><div><h1>Programme</h1><p>{{ conf.name }} · {{ conf.venue }}</p></div></div>
+{% if program %}{% for item in program %}{% set s = item.session %}
+<article class="session"><header><h3>{{ s.title }}</h3><span class="chip teal">{{ icon('pin', 14) }}{{ s.room }}</span><span class="chip">{{ s.start_time|dt('%a %d %b, %H:%M') }} to {{ s.end_time[11:] }}</span></header>
+  {% if item.papers %}<ol>{% for p in item.papers %}<li><a href="{{ url_for('paper_detail', paper_id=p.paper_id) }}" style="color:var(--ink);text-decoration:none">{{ p.title }}</a> <span style="color:var(--ink-3);font-weight:500">· {{ p.author }}</span></li>{% endfor %}</ol>
+  {% else %}<p style="padding:.9rem 1.2rem;color:var(--ink-3)">No papers scheduled in this session yet.</p>{% endif %}</article>{% endfor %}
+{% else %}<div class="card">{{ empty('calendar', 'The programme is not published yet', 'Sessions appear here once the chair schedules accepted papers.') }}</div>{% endif %}
+{% endblock %}

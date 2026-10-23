@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}Log in{% endblock %}
+{% block layout %}
+<div class="auth">
+  {% set headline = 'Run your conference from one place.' %}
+  {% set lead = 'Submit papers, assign reviewers, track decisions, take registrations and publish the programme.' %}
+  {% include '_authart.html' %}
+  <section class="auth-form">
+    <div class="auth-top"><span></span><button class="iconbtn" id="theme" aria-label="Switch colour theme">{{ icon('moon') }}</button></div>
+    {% include '_flash.html' %}
+    <div>
+      <h2>Welcome back</h2>
+      <p class="intro">Log in to see your dashboard. New here? <a href="{{ url_for('register') }}">Create an account</a>.</p>
+    </div>
+    <form method="post" id="loginform">
+      {{ csrf() }}
+      {{ field('Email', 'email', 'email', request.form.get('email',''), extra='autocomplete="username" id="email"') }}
+      {{ field('Password', 'password', 'password', '', extra='autocomplete="current-password" id="password"') }}
+      <button class="btn block" style="padding:.8rem">Log in</button>
+    </form>
+    {% if demo %}
+    <div class="demo">
+      <h3>Try a demo account</h3>
+      <p>Pick a role to fill the form. Every demo account uses the password Demo@1234.</p>
+      <div class="demo-grid">
+        {% for email, label, note in demo %}<button type="button" data-email="{{ email }}"><span>{{ label }}</span><small>{{ note }}</small></button>{% endfor %}
+      </div>
+    </div>
+    <script>document.querySelectorAll('.demo-grid button').forEach(function(b){b.addEventListener('click',function(){document.getElementById('email').value=b.dataset.email;document.getElementById('password').value='Demo@1234';document.getElementById('loginform').submit()})})</script>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'page.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}Submit a paper{% endblock %}
+{% block body %}
+<a class="eyebrow-link" href="{{ url_for('conference', conf_id=conf.conf_id) }}">{{ icon('arrow', 15) }}{{ conf.name }}</a>
+<div class="head"><div><h1>Submit a paper</h1><p>Deadline {{ conf.submission_deadline|d }} (inclusive). Only PDF files up to 10 MB are accepted.</p></div></div>
+<div class="cols w21" style="align-items:start">
+  <form method="post" enctype="multipart/form-data" class="card rec">
+    {{ csrf() }}
+    <div class="formgrid">
+      <div class="span">{{ field('Title', 'title', 'text', form.get('title',''), extra='maxlength="200"') }}</div>
+      <label class="field"><span>Track</span><select name="track_id" required>{% for t in tracks %}<option value="{{ t.track_id }}" {{ 'selected' if form.get('track_id')|string == t.track_id|string }}>{{ t.name }}</option>{% endfor %}</select></label>
+      {{ field('Keywords', 'keywords', 'text', form.get('keywords',''), required=False, hint='Comma separated. Reviewers are matched on these.') }}
+      <label class="field span"><span>Abstract</span><textarea name="abstract" required placeholder="At least 50 characters.">{{ form.get('abstract','') }}</textarea></label>
+      <label class="field span"><span>Paper (PDF)</span><input type="file" name="file" accept="application/pdf" required></label>
+    </div>
+    <div class="actions"><button class="btn">{{ icon('upload', 18) }}Submit paper</button><a class="btn ghost" href="{{ url_for('conference', conf_id=conf.conf_id) }}">Cancel</a></div>
+  </form>
+  <section class="card"><h2 style="margin-bottom:.8rem">What happens next</h2>
+    <ol class="timeline" style="padding:0;list-style:none">
+      <div><b>Now</b><span>The chair is notified of your paper.</span></div>
+      <div><b>Reviewer assignment</b><span>The chair assigns reviewers, or reviewers volunteer.</span></div>
+      <div><b>Review</b><span>At least 2 reviewers score it anonymously.</span></div>
+      <div><b>Decision</b><span>Accept, revise or reject, with remarks.</span></div>
+    </ol></section>
+</div>
+{% endblock %}

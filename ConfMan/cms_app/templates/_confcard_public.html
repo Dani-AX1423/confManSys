@@ -1,0 +1,14 @@
+{% from '_macros.html' import icon %}
+<article class="conf">
+  <div class="conf-top">
+    <div class="datebox"><b>{{ c.start_date[8:10] }}</b><span>{{ c.start_date|dt('%b %Y') }}</span></div>
+    <div><h3>{{ c.name }}</h3><small>{{ icon('pin', 15) }}{{ c.venue }}</small></div>
+  </div>
+  <div class="conf-body">
+    {% if c.description %}<p>{{ c.description[:140] }}{{ '…' if c.description|length > 140 }}</p>{% endif %}
+
+    
+    <div class="chips"><span class="chip">Submit by {{ c.submission_deadline|d }}</span><span class="chip teal">Early bird to {{ c.early_bird_deadline|d }}</span></div>
+  </div>
+  <div class="conf-foot"><a class="btn sm" href="{{ url_for('conference', conf_id=c.conf_id) }}">Open</a><a class="btn ghost sm" href="{{ url_for('program', conf_id=c.conf_id) }}">Programme</a></div>
+</article>
