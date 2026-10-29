@@ -933,7 +933,7 @@ def create_app(test_config=None):
 
     @app.errorhandler(404)
     def not_found(_e):
-        debug_info = f"Path: {request.path} | PATH_INFO: {request.environ.get('PATH_INFO')} | SCRIPT_NAME: {request.environ.get('SCRIPT_NAME')} | X-Matched: {request.headers.get('x-matched-path')} | Raw: {request.environ.get('RAW_URI')}"
+        debug_info = f"Headers: {dict(request.headers)} | Environ keys: {[k for k in request.environ.keys() if 'PATH' in k or 'URI' in k or 'URL' in k or 'ROUTE' in k]}"
         return render_template("error.html", code=404, title="We couldn't find that page",
                                text=debug_info), 404
 
