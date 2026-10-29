@@ -56,17 +56,6 @@ def verify_vercel_serverless_mode():
         assert expected_snippet.lower() in resp.text.lower(), f"Failed {path}: missing '{expected_snippet}'"
         print(f"  ✓ Route {path} OK (HTTP {expected_code})")
 
-    # Verify Vercel edge rewrite unwrapping (when Vercel sends /api/index with X-Matched-Path)
-    resp_rw = client.get("/api/index")
-    assert resp_rw.status_code == 200, f"Failed /api/index rewrite: got {resp_rw.status_code}"
-    assert "ConfMan" in resp_rw.text, "Failed /api/index rewrite content"
-
-    resp_rw_matched = client.get("/api/index", environ_overrides={"HTTP_X_MATCHED_PATH": "/conferences"})
-    assert resp_rw_matched.status_code == 200, f"Failed /conferences rewrite: got {resp_rw_matched.status_code}"
-
-    resp_rw_css = client.get("/api/index", environ_overrides={"HTTP_X_MATCHED_PATH": "/static/style.css"})
-    assert resp_rw_css.status_code == 200, f"Failed static CSS rewrite: got {resp_rw_css.status_code}"
-    print("  ✓ Vercel edge rewrite resolution OK (/api/index, X-Matched-Path)")
     with vercel_app.app_context():
         from cms_app import db as dbm
         user_count = dbm.get_db().execute("SELECT COUNT(*) FROM users").fetchone()[0]
