@@ -18,6 +18,30 @@ from . import services as svc
 DECIDED = ("Accepted", "Rejected", "Revision Required", "Scheduled")
 
 
+class VercelPathFixer:
+    """WSGI middleware to unwrap original request path rewritten by Vercel edge proxy."""
+
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        matched = (
+            environ.get("HTTP_X_MATCHED_PATH")
+            or environ.get("HTTP_X_FORWARDED_URI")
+            or environ.get("HTTP_X_ORIGINAL_URL")
+        )
+        if matched:
+            environ["PATH_INFO"] = matched.split("?")[0]
+        else:
+            path = environ.get("PATH_INFO", "")
+            if path in ("/api/index", "/api/index.py", "/api/index/"):
+                environ["PATH_INFO"] = "/"
+            elif path.startswith("/api/index/"):
+                environ["PATH_INFO"] = path[len("/api/index"):]
+
+        return self.wsgi_app(environ, start_response)
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
 
@@ -941,4 +965,5 @@ def create_app(test_config=None):
         return render_template("error.html", code=400, title="That request couldn't be processed",
                                text=getattr(e, "description", "") or "Reload the page and try again."), 400
 
+    app.wsgi_app = VercelPathFixer(app.wsgi_app)
     return app
