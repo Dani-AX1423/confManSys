@@ -18,6 +18,31 @@ from . import services as svc
 DECIDED = ("Accepted", "Rejected", "Revision Required", "Scheduled")
 
 
+class VercelPathFixer:
+    """WSGI middleware to unwrap original request path passed from Vercel edge rewrites."""
+
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        query = environ.get("QUERY_STRING", "")
+        if "__path=" in query:
+            import urllib.parse
+            params = urllib.parse.parse_qs(query, keep_blank_values=True)
+            if "__path" in params and params["__path"]:
+                target_path = params.pop("__path")[0]
+                environ["PATH_INFO"] = target_path if target_path.startswith("/") else "/" + target_path
+                environ["QUERY_STRING"] = urllib.parse.urlencode(params, doseq=True)
+                return self.wsgi_app(environ, start_response)
+
+        path = environ.get("PATH_INFO", "")
+        if path.startswith("/api/index"):
+            stripped = path[len("/api/index"):]
+            environ["PATH_INFO"] = stripped if stripped.startswith("/") else ("/" + stripped if stripped else "/")
+
+        return self.wsgi_app(environ, start_response)
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
 
@@ -933,13 +958,13 @@ def create_app(test_config=None):
 
     @app.errorhandler(404)
     def not_found(_e):
-        debug_info = f"Headers: {dict(request.headers)} | Environ keys: {[k for k in request.environ.keys() if 'PATH' in k or 'URI' in k or 'URL' in k or 'ROUTE' in k]}"
         return render_template("error.html", code=404, title="We couldn't find that page",
-                               text=debug_info), 404
+                               text="The link may be old or the item may have been removed."), 404
 
     @app.errorhandler(400)
     def bad_request(e):
         return render_template("error.html", code=400, title="That request couldn't be processed",
                                text=getattr(e, "description", "") or "Reload the page and try again."), 400
 
+    app.wsgi_app = VercelPathFixer(app.wsgi_app)
     return app
