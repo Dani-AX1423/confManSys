@@ -933,8 +933,9 @@ def create_app(test_config=None):
 
     @app.errorhandler(404)
     def not_found(_e):
+        debug_info = f"Path: {request.path} | PATH_INFO: {request.environ.get('PATH_INFO')} | SCRIPT_NAME: {request.environ.get('SCRIPT_NAME')} | X-Matched: {request.headers.get('x-matched-path')} | Raw: {request.environ.get('RAW_URI')}"
         return render_template("error.html", code=404, title="We couldn't find that page",
-                               text="The link may be old or the item may have been removed."), 404
+                               text=debug_info), 404
 
     @app.errorhandler(400)
     def bad_request(e):
