@@ -2071,3 +2071,22 @@ This checklist is provided for academic project evaluators, external examiners, 
 - [x] **Mandatory Registration Scheduling Policy:** Verify that an accepted paper cannot be scheduled unless the primary author possesses a confirmed, paid registration.
 - [x] **Unicode Digit Regression Test (DEF-01):** Verify that non-ASCII digits (e.g., `²`) in credit card numbers do not bypass validation or crash the runtime.
 - [x] **Automated Test Suite Execution:** Verify that all 67 tests in `tests/test_cms.py` and `tests/test_v13.py` execute and pass cleanly.
+
+
+---
+
+## 29. Appendix D: Screenshots
+
+The following figures show the ConfMan web interface across the primary workflows:
+
+### Figure D.1 – Dashboard – Home Page and Login Screen
+![Figure D.1 – Dashboard – Home Page and Login Screen](screenshots/Figure_D1_Dashboard_Home_and_Login.png)
+
+### Figure D.2 – Chair Dashboard – KPI Cards and Submission Queue
+![Figure D.2 – Chair Dashboard – KPI Cards and Submission Queue](screenshots/Figure_D2_Chair_Dashboard.png)
+
+### Figure D.3 – Paper Detail View with Review Panel
+![Figure D.3 – Paper Detail View with Review Panel](screenshots/Figure_D3_Paper_Detail_Review_Panel.png)
+
+### Figure D.4 – Payment Checkout and Registration Confirmation
+![Figure D.4 – Payment Checkout and Registration Confirmation](screenshots/Figure_D4_Payment_Checkout_and_Confirmation.png)
