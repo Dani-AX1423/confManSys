@@ -20,18 +20,34 @@ DECIDED = ("Accepted", "Rejected", "Revision Required", "Scheduled")
 
 def create_app(test_config=None):
     app = Flask(__name__)
+
+    is_vercel = bool(os.environ.get("VERCEL"))
+    default_instance = "/tmp/confman_instance" if is_vercel else app.instance_path
+    db_path = os.environ.get("CMS_DATABASE", os.path.join(default_instance, "cms.sqlite"))
+    upload_folder = os.environ.get("CMS_UPLOAD_FOLDER", os.path.join(default_instance, "uploads"))
+    auto_seed_env = os.environ.get("CMS_AUTO_SEED")
+    if auto_seed_env is not None:
+        auto_seed = auto_seed_env.lower() in ("1", "true", "yes")
+    else:
+        auto_seed = True if is_vercel else False
+
     app.config.update(
         SECRET_KEY=os.environ.get("CMS_SECRET", "dev-only-change-me"),
-        DATABASE=os.path.join(app.instance_path, "cms.sqlite"),
-        UPLOAD_FOLDER=os.path.join(app.instance_path, "uploads"),
+        DATABASE=db_path,
+        UPLOAD_FOLDER=upload_folder,
         MAX_CONTENT_LENGTH=10 * 1024 * 1024,
-        CSRF_ENABLED=True,
-        AUTO_SEED=False,
+        CSRF_ENABLED=os.environ.get("CMS_CSRF_ENABLED", "true").lower() in ("1", "true", "yes"),
+        AUTO_SEED=auto_seed,
     )
     if test_config:
         app.config.update(test_config)
-    os.makedirs(os.path.dirname(app.config["DATABASE"]), exist_ok=True)
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    db_dir = os.path.dirname(app.config["DATABASE"])
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    if app.config.get("UPLOAD_FOLDER"):
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
     app.teardown_appcontext(dbm.close_db)
     with app.app_context():
         dbm.init_db()
